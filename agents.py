@@ -2,6 +2,7 @@ import tensorflow as tf
 from collections import deque
 import numpy as np
 import random
+from itertools import islice
 
 
 # Deep Q-learning Agent
@@ -13,7 +14,7 @@ class DQNAgent:
         self.gamma = 0.95  # discount rate
         self.epsilon = 1.0  # exploration rate
         self.epsilon_min = 0.01
-        self.epsilon_decay = 0.999
+        self.epsilon_decay = 0.9995
         self.learning_rate = 0.001
         self.acted_randomly = True
         self.model = self._build_model()
@@ -38,28 +39,29 @@ class DQNAgent:
                       optimizer=tf.keras.optimizers.Adam(lr=self.learning_rate))
         return model
 
-    def remember(self, state, action, reward, next_state, done):
-        self.memory.append((state, action, reward, next_state, done))
+    def remember(self, states, action, reward, next_state, done):
+        self.memory.append((states, action, reward, next_state, done))
 
-    def act(self, state):
+    def act(self, states):
         if np.random.rand() <= self.epsilon:
             self.acted_randomly = True
             return random.randrange(self.action_size)
         else:
             self.acted_randomly = False
-        if len(state.shape) == 3:
-            state = np.array([state])
-        act_values = self.model.predict(state)
+        act_values = self.model.predict(np.array([np.concatenate(states, axis=2)]))
         return np.argmax(act_values[0])  # returns action
 
     def replay(self, batch_size):
         minibatch = random.sample(self.memory, batch_size)
-        for state, action, reward, next_state, done in minibatch:
+        for states, action, reward, next_state, done in minibatch:
             target = reward
             if not done:
-                target = reward + self.gamma * np.amax(self.model.predict(np.array([next_state])))
-            target_f = self.model.predict(np.array([state]))
-            target_f[0][action] = target
-            self.model.fit(np.array([state]), target_f, epochs=1, verbose=0)
-        if self.epsilon > self.epsilon_min:
-            self.epsilon *= self.epsilon_decay
+                next_input = np.array(
+                    [np.concatenate((next_state, *deque(islice(states, 0, len(states) - 1))), axis=2)])
+                target = reward + self.gamma * np.amax(self.model.predict(next_input))
+                cur_input = np.array([np.concatenate(states, axis=2)])
+                target_f = self.model.predict(cur_input)
+                target_f[0][action] = target
+                self.model.fit(cur_input, target_f, epochs=1, verbose=0)
+                if self.epsilon > self.epsilon_min:
+                    self.epsilon *= self.epsilon_decay
