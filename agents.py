@@ -14,7 +14,7 @@ class DQNAgent:
         self.gamma = 0.95  # discount rate
         self.epsilon = 1.0  # exploration rate
         self.epsilon_min = 0.01
-        self.epsilon_decay = 0.9995
+        self.epsilon_decay = 0.9999999
         self.learning_rate = 0.001
         self.acted_randomly = True
         self.model = self._build_model()
@@ -43,11 +43,10 @@ class DQNAgent:
         self.memory.append((states, action, reward, next_state, done))
 
     def act(self, states):
+        self.acted_randomly = False
         if np.random.rand() <= self.epsilon:
             self.acted_randomly = True
             return random.randrange(self.action_size)
-        else:
-            self.acted_randomly = False
         act_values = self.model.predict(np.array([np.concatenate(states, axis=2)]))
         return np.argmax(act_values[0])  # returns action
 
@@ -55,6 +54,7 @@ class DQNAgent:
         minibatch = random.sample(self.memory, batch_size)
         for states, action, reward, next_state, done in minibatch:
             target = reward
+
             if not done:
                 next_input = np.array(
                     [np.concatenate((next_state, *deque(islice(states, 0, len(states) - 1))), axis=2)])
@@ -65,6 +65,6 @@ class DQNAgent:
                 self.model.fit(cur_input, target_f, epochs=1, verbose=0)
                 if self.epsilon > self.epsilon_min:
                     self.epsilon *= self.epsilon_decay
-    
+
     def save(self, path):
         self.model.save(path)
