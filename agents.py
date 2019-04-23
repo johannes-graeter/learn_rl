@@ -65,3 +65,6 @@ class DQNAgent:
                 self.model.fit(cur_input, target_f, epochs=1, verbose=0)
                 if self.epsilon > self.epsilon_min:
                     self.epsilon *= self.epsilon_decay
+    
+    def save(self, path):
+        self.model.save(path)

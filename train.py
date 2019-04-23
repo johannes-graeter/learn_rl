@@ -49,6 +49,9 @@ def main(num_episodes, render=False):
         # train the agent with the experience of the episode
         agent.replay(320)
         # print("epsilon {}".format(agent.epsilon))
+        if e % 1000 == 0:
+            agent.save("./deep_q_model.h5")
+            print("saved model")
 
 
 if __name__ == "__main__":
